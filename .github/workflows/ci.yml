@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# Proves the skeleton as a self-hoster gets it: the packages from Packagist, an
+# empty PostgreSQL, the migrations, and the login page.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: foresi
+          POSTGRES_PASSWORD: foresi
+          POSTGRES_DB: foresi
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U foresi" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      APP_ENV: prod
+      APP_DEBUG: '0'
+      APP_SECRET: ci-only-secret-0123456789abcdef
+      DATABASE_URL: postgresql://foresi:foresi@127.0.0.1:5432/foresi?serverVersion=17&charset=utf8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ctype, dom, gd, iconv, intl, sodium, zip, pdo_pgsql
+          tools: composer:v2
+      - name: Install from Packagist
+        run: composer install --no-dev --no-progress --optimize-autoloader
+      - name: Build the assets
+        run: |
+          php bin/console tailwind:build --minify
+          php bin/console asset-map:compile
+      - name: Migrate an empty database
+        run: |
+          php bin/console doctrine:migrations:migrate --no-interaction
+          php bin/console doctrine:schema:validate
+      - name: Events are catalogued
+        run: test "$(php bin/console app:events | grep -c '\.')" -gt 0
+      - name: The login page answers
+        run: |
+          php -S 127.0.0.1:8000 -t public > /tmp/server.log 2>&1 &
+          sleep 2
+          curl --fail --silent --show-error --output /dev/null http://127.0.0.1:8000/login

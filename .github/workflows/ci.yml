@@ -40,6 +40,17 @@ jobs:
           php-version: '8.4'
           extensions: ctype, dom, gd, iconv, intl, sodium, zip, pdo_pgsql
           tools: composer:v2
+      # A self-hoster keeps the secrets in .env.local (ops/deploy.sh shares it
+      # between releases). The built-in web server below does not see the job's
+      # environment in $_SERVER, so without this file .env's empty APP_SECRET wins.
+      - name: Write .env.local
+        run: |
+          {
+            echo "APP_ENV=$APP_ENV"
+            echo "APP_DEBUG=$APP_DEBUG"
+            echo "APP_SECRET=$APP_SECRET"
+            echo "DATABASE_URL=\"$DATABASE_URL\""
+          } > .env.local
       - name: Install from Packagist
         run: composer install --no-dev --no-progress --optimize-autoloader
       - name: Build the assets
@@ -56,4 +67,12 @@ jobs:
         run: |
           php -S 127.0.0.1:8000 -t public > /tmp/server.log 2>&1 &
           sleep 2
-          curl --fail --silent --show-error --output /dev/null http://127.0.0.1:8000/login
+          curl --fail --silent --show-error --output /tmp/login.html http://127.0.0.1:8000/login
+          for asset in $(grep -oE '(href|src)="/assets/[^"]+"' /tmp/login.html | cut -d'"' -f2); do
+            curl --fail --silent --show-error --output /dev/null "http://127.0.0.1:8000$asset"
+          done
+      - name: Logs
+        if: failure()
+        run: |
+          cat /tmp/server.log || true
+          tail -n 200 var/log/*.log || true

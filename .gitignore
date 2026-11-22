@@ -7,3 +7,6 @@
 /assets/vendor/
 /var/
 /vendor/
+
+# A new application resolves its own versions; commit your lock in your application.
+/composer.lock

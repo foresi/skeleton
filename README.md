@@ -55,9 +55,28 @@ The packages bring their whole configuration. A file in `config/packages/` overr
 
 Your own code goes in `src/` (namespace `App\`). A module of your own can live in `modules/` as a Composer path repository.
 
+## Modules of your own
+
+A module of your own, or of another vendor, is built on Foresi's module API: the `Contract` namespaces of Foresi's modules and the few classes marked `@api`. The module API has a version of its own, apart from Foresi's releases, and `foresi/shared` provides it to Composer as the virtual package `foresi/module-api`. Every module requires a range of it in its `composer.json`:
+
+```json
+"require": {
+    "foresi/module-api": "^1.0"
+}
+```
+
+Composer refuses to install a module whose range this Foresi does not provide, and the application does not boot with one. Check the installed modules with:
+
+```bash
+php bin/console app:modules:check
+php bin/console app:modules:check --api=2.0
+```
+
+The second form checks against the module API version an upgrade would bring, before you upgrade. `ops/deploy.sh` runs the check after `composer install` and before the migrations. The [module author guide](https://github.com/foresi/foresi/blob/main/docs/modules.md) teaches how to write a module, step by step.
+
 ## Updates
 
-Versions follow Foresi's releases. Under 0.x, `^0.9` stays within 0.9:
+Versions follow Foresi's releases. Under 0.x, `^0.11` stays within 0.11:
 
 ```bash
 composer update 'foresi/*'

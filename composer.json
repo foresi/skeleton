@@ -12,8 +12,8 @@
     "prefer-stable": true,
     "require": {
         "php": ">=8.4",
-        "foresi/core": "^0.9.13",
-        "foresi/ui": "^0.9.13",
+        "foresi/core": "^0.11.4",
+        "foresi/ui": "^0.11.4",
         "symfony/dotenv": "7.4.*",
         "symfony/runtime": "7.4.*"
     },
